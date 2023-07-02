@@ -1,6 +1,9 @@
 use std::{error::Error, time::Duration};
 
 use argh::FromArgs;
+use lazy_static::lazy_static;
+use std::sync::RwLock;
+use config::Config;
 
 use crate::crossterm::run;
 
@@ -12,6 +15,17 @@ mod ui;
 mod repository;
 #[macro_use]
 mod log;
+
+lazy_static! {
+    pub static ref SETTINGS: RwLock<Config> = RwLock::new(Config::builder()
+        // Add in `./config.{yml|toml}`
+        .add_source(config::File::with_name("config"))
+        // Add in settings from the environment (with a prefix of TRACK_WORK)
+        // Eg.. `TRACK_WORK_DEBUG=1 ./target/app` would set the `debug` key
+        .add_source(config::Environment::with_prefix("TRACK_WORK"))
+        .build()
+        .unwrap());
+}
 
 /// Demo
 #[derive(Debug, FromArgs)]

@@ -16,11 +16,12 @@ use crate::input::normal_mode::NormalMode;
 use crate::log::{LOG, log};
 use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
 use crate::repository::repository::WorkRecordRepository;
+use crate::SETTINGS;
 use crate::widgets::list::StatefulList;
 
-const PROJECTS: [&str; 6] = [
-    "XO", "EKS", "Xorcery", "4", "5", "Xylophon"
-];
+// const PROJECTS: [&str; 6] = [
+//     "XO", "EKS", "Xorcery", "4", "5", "Xylophon"
+// ];
 
 const WORK_RECORD_REPO: Lazy<Mutex<WorkRecordRepository>> = Lazy::new(||
     Mutex::new(WorkRecordRepository::new(
@@ -142,12 +143,22 @@ pub struct App<'a> {
     pub active_project: Option<ActiveProject>,
 }
 
+fn string_to_static_string(s: String) -> &'static str {
+    Box::leak(s.into_boxed_str())
+}
+
 impl<'a> App<'a> {
     pub fn new(title: &'a str, enhanced_graphics: bool) -> App<'a> {
+        let projects: Vec<&'static str> = SETTINGS.read().expect("could not acquire read lock on app settings")
+            .get_array("projects").expect("you need to configure the `projects`")
+            .iter()
+            .map(|val| val.clone().into_string().expect("projects must be strings"))
+            .map(|string| string_to_static_string(string))
+            .collect();
         App {
             title,
             should_quit: false,
-            projects: StatefulList::with_items(PROJECTS.to_vec()),
+            projects: StatefulList::with_items(projects),
             focus: Focus::PROJECTS,
             mode: Mode::NORMAL(NormalMode {}),
             enhanced_graphics,
