@@ -34,7 +34,7 @@ impl Entity for WorkRecord {
 impl WorkRecordRepository {
     pub fn new(path: String) -> io::Result<WorkRecordRepository> {
         let root_path = Path::new(&path);
-        create_dir_if_not_exists(&root_path)?;
+        create_dir_if_not_exists(root_path)?;
         let folder = root_path.join(Path::new("work_records/"));
         create_dir_if_not_exists(&folder)?;
         let subfolder = folder.into_os_string().into_string().expect("this path should always convert");
@@ -51,24 +51,24 @@ impl WorkRecordRepository {
                 .map(|project_reference: &&WorkRecord| (*project_reference).clone())
                 .collect();
             values.sort_by_key(|x| x.start);
-            if values.len() == 0  {
+            if values.is_empty()  {
                 return None
             }
-            values.get(values.len() - 1).map(|x: &WorkRecord| x.clone())
+            values.last().cloned()
         })
     }
 
     fn load_latest_week(&self) -> Option<HashMap<String, WorkRecord>> {
-        let mut iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(|it| it.collect());
+        let iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(|it| it.collect());
         match iterator {
             Err(err) => {
                 log!("failed to list files in database directory ({}): {}", &self.subfolder, err);
                 None
             }
-            Ok(mut iterator) if iterator.len() > 0 => {
+            Ok(mut iterator) if !iterator.is_empty() => {
                 iterator.sort_by_key(|dir| dir.path());
 
-                let latest: Option<&DirEntry> = iterator.get(iterator.len() - 1);
+                let latest: Option<&DirEntry> = iterator.last();
                 if let Some(latest) = latest {
                     let result = self.get_all_of_file(&latest.path());
                     match result {
@@ -112,7 +112,7 @@ impl WorkRecordRepository {
 
     fn get_all_of_file(&self, path: &PathBuf) -> io::Result<HashMap<String, WorkRecord>> {
         if path.is_file() {
-            let file = File::open(&path)?;
+            let file = File::open(path)?;
             Ok(serde_json::from_reader(file).expect(""))
         } else {
             Ok(HashMap::new())

@@ -16,7 +16,7 @@ pub struct StatefulList<T> {
 
 impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-        let copy_of_items = items.iter().map(|x| x.clone()).collect();
+        let copy_of_items = items.to_vec();
 
         let mut state = ListState::default();
         state.select(Some(0));
@@ -64,12 +64,11 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     fn filter(&mut self) {
         let matcher = SkimMatcherV2::default();
         let selection = self.state.selected()
-            .and_then(|x| self.items_filtered.get(x))
-            .map(|x| x.clone());
+            .and_then(|x| self.items_filtered.get(x)).copied();
         self.items_filtered = self.items.iter()
             .map(|x| (x, matcher.fuzzy_match(format!("{}", x).as_str(), self.filter.as_str())))
             .filter(|(_, fuzz)| fuzz.is_some())
-            .map(|(x, _)| x.clone())
+            .map(|(x, _)| *x)
             .collect();
 
         self.state = ListState::default();

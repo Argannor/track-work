@@ -123,7 +123,7 @@ fn draw_projects<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         (Mode::FILTER(_), Focus::PROJECTS) => Color::LightCyan,
         _ => Color::White,
     };
-    let title: String = if app.projects.filter.len() > 0 {
+    let title: String = if !app.projects.filter.is_empty() {
         format!(" Projects (filter: {}) ", app.projects.filter)
     } else {
         " Projects ".to_string()
@@ -151,7 +151,7 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         (Mode::FILTER(_), Focus::PROJECTS) => Color::LightCyan,
         _ => Color::White,
     };
-    let title: String = if app.projects.filter.len() > 0 {
+    let title: String = if !app.projects.filter.is_empty() {
         format!(" Log (filter: {}) ", app.projects.filter)
     } else {
         " Log ".to_string()
@@ -167,8 +167,7 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     if area.height > 2 {
         let messages: Vec<ListItem> = LOG.lock().unwrap()
             .last_n(area.height as usize - 2)
-            .iter()
-            .map(|x| x.clone())
+            .iter().copied()
             .map(|x| ListItem::new(vec![Spans::from(Span::raw(x))]))
             .collect();
         let log = List::new(messages)

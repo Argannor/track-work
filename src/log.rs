@@ -24,7 +24,7 @@ impl<'a> Log<'a> {
         } else {
             self.entries.len() - n
         };
-        self.entries.iter().skip(skip).map(|x| x.clone()).collect()
+        self.entries.iter().skip(skip).copied().collect()
     }
 }
 

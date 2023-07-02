@@ -1,12 +1,10 @@
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
-use std::ops::Add;
 use std::sync::Mutex;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::app::ProjectState::WORKING;
@@ -18,10 +16,6 @@ use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
 use crate::repository::repository::WorkRecordRepository;
 use crate::SETTINGS;
 use crate::widgets::list::StatefulList;
-
-// const PROJECTS: [&str; 6] = [
-//     "XO", "EKS", "Xorcery", "4", "5", "Xylophon"
-// ];
 
 const WORK_RECORD_REPO: Lazy<Mutex<WorkRecordRepository>> = Lazy::new(||
     Mutex::new(WorkRecordRepository::new(
@@ -63,7 +57,7 @@ impl ActiveProject {
     }
 
     pub fn new(name: String) -> ActiveProject {
-        let name: String = name.clone();
+        let name: String = name;
         let start = Utc::now();
         let work_record = WorkRecord {
             id: Uuid::new_v4().to_string(),
@@ -152,8 +146,8 @@ impl<'a> App<'a> {
         let projects: Vec<&'static str> = SETTINGS.read().expect("could not acquire read lock on app settings")
             .get_array("projects").expect("you need to configure the `projects`")
             .iter()
-            .map(|val| val.clone().into_string().expect("projects must be strings"))
-            .map(|string| string_to_static_string(string))
+            .map(|val| val.clone().into_string().expect("projects must be strings")) // TODO: refactor config into proper struct
+            .map(string_to_static_string)
             .collect();
         App {
             title,
