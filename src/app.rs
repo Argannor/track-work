@@ -14,6 +14,7 @@ use crate::input::filter_mode::FilterMode;
 use crate::input::input_handler::InputHandler;
 use crate::input::normal_mode::NormalMode;
 use crate::log::{LOG, log};
+use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
 use crate::repository::repository::WorkRecordRepository;
 use crate::widgets::list::StatefulList;
 
@@ -44,47 +45,12 @@ pub enum Focus {
     LOG,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub enum TimeKind {
-    PRODUCTIVE,
-    PAUSE
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TimeSegment {
-    pub start: DateTime<Utc>,
-    pub end: Option<DateTime<Utc>>,
-    pub kind: TimeKind
-}
-
-impl TimeSegment {
-    pub fn finish(&mut self) {
-        if self.end.is_none() {
-            self.end = Some(Utc::now());
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum ProjectState {
-    WORKING,
-    PAUSED,
-    DONE,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActiveProject {
-    pub id: String,
-    pub name: String,
-    pub start: DateTime<Utc>,
-    pub end: Option<DateTime<Utc>>,
-    pub state: ProjectState,
-    pub segments: Vec<TimeSegment>
+    record: WorkRecord
 }
 
 impl Drop for ActiveProject {
     fn drop(&mut self) {
-        // FIXME: causes stack overflow. We need to split the ActiveProject (Behaviour) and Project (DTO) to prevent this
         self.stop()
     }
 }
@@ -92,13 +58,13 @@ impl Drop for ActiveProject {
 impl ActiveProject {
 
     pub fn load_previous() -> Option<ActiveProject> {
-        WORK_RECORD_REPO.lock().unwrap().get_latest()
+        WORK_RECORD_REPO.lock().unwrap().get_latest().map(|record| ActiveProject{record})
     }
 
     pub fn new(name: String) -> ActiveProject {
         let name: String = name.clone();
         let start = Utc::now();
-        let project = ActiveProject {
+        let work_record = WorkRecord {
             id: Uuid::new_v4().to_string(),
             name,
             start,
@@ -110,20 +76,20 @@ impl ActiveProject {
                 kind: TimeKind::PRODUCTIVE
             }],
         };
-        log!("{}", project);
-        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&project) {
-            log!("failed to save work record for {}: {}", project.name, e);
+        log!("{}", work_record);
+        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&work_record) {
+            log!("failed to save work record for {}: {}", work_record.name, e);
         }
 
-        project
+        ActiveProject{record: work_record}
     }
 
     pub fn begin_pause(&mut self) {
-        self.state = ProjectState::PAUSED;
-        if let Some(last_segment) = self.segments.last_mut() {
+        self.record.state = ProjectState::PAUSED;
+        if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
         }
-        self.segments.push(TimeSegment{
+        self.record.segments.push(TimeSegment{
             start: Utc::now(),
             end: None,
             kind: TimeKind::PAUSE
@@ -131,11 +97,11 @@ impl ActiveProject {
     }
 
     pub fn resume_work(&mut self) {
-        self.state = ProjectState::WORKING;
-        if let Some(last_segment) = self.segments.last_mut() {
+        self.record.state = WORKING;
+        if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
         }
-        self.segments.push(TimeSegment{
+        self.record.segments.push(TimeSegment{
             start: Utc::now(),
             end: None,
             kind: TimeKind::PRODUCTIVE
@@ -143,61 +109,25 @@ impl ActiveProject {
     }
 
     pub fn stop(&mut self) {
-        self.state = ProjectState::DONE;
-        if let Some(last_segment) = self.segments.last_mut() {
-            last_segment.finish();
-            self.end = last_segment.end;
+        if self.record.state == ProjectState::DONE {
+            return;
         }
-        log!("{}", self);
-        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&self) {
-            log!("failed to save work record for {}: {}", self.name, e);
+        self.record.state = ProjectState::DONE;
+        if let Some(last_segment) = self.record.segments.last_mut() {
+            last_segment.finish();
+            self.record.end = last_segment.end;
+        }
+        log!("{}", self.record);
+        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&self.record) {
+            log!("failed to save work record for {}: {}", self.record.name, e);
         }
     }
 
-    fn calculate_duration(&self) -> chrono::Duration {
-        self.segments.iter()
-            .filter(|segment| segment.kind == TimeKind::PRODUCTIVE)
-            .map(|segment| {
-                if let Some(end) = segment.end {
-                    end.signed_duration_since(segment.start)
-                } else {
-                    Utc::now().signed_duration_since(segment.start)
-                }
-            })
-            .reduce(|a,b| a.add(b))
-            .expect("There should always be at least one segment to calculate a Duration")
-    }
 }
 
 impl Display for ActiveProject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let icon = match self.state {
-            ProjectState::WORKING => "♪",
-            ProjectState::PAUSED => "𝄽",
-            ProjectState::DONE => "✓"
-        };
-
-        let mut result = format!(
-            "{} {}: {}",
-            icon,
-            self.name,
-            self.start.with_timezone(chrono::Local::now().offset()).format("%Y-%m-%d %H:%M"));
-
-        let duration = self.calculate_duration();
-        if let Some(end) = self.end {
-            result = format!("{} - {} (working time: {:02}:{:02}:{:02})",
-                             result,
-                             end.with_timezone(chrono::Local::now().offset()).format("%H:%M"),
-                             duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
-            );
-        } else {
-            result = format!("{} (working time: {:02}:{:02}:{:02})",
-                             result,
-                             duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
-            );
-        }
-
-        f.write_str(&result)
+        std::fmt::Display::fmt(&self.record, f)
     }
 }
 
@@ -261,9 +191,7 @@ impl<'a> App<'a> {
 
     pub fn start_working_on(&mut self, project: String) {
         if let Some(ref mut current_project) = self.active_project {
-            current_project.end = Some(Utc::now());
-            current_project.state = ProjectState::DONE;
-            // todo safe previous
+            current_project.stop();
         }
         self.active_project = Some(ActiveProject::new(project));
     }

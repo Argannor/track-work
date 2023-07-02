@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use crate::app::ActiveProject;
 use crate::log::log;
 use crate::log::LOG;
+use crate::repository::model::WorkRecord;
 
 trait Entity {
     fn get_id(&self) -> String;
@@ -24,7 +24,7 @@ pub struct WorkRecordRepository {
     subfolder: String,
 }
 
-impl Entity for ActiveProject {
+impl Entity for WorkRecord {
     fn get_id(&self) -> String {
         self.id.clone()
     }
@@ -44,21 +44,21 @@ impl WorkRecordRepository {
         })
     }
 
-    pub fn get_latest(&self) -> Option<ActiveProject> {
+    pub fn get_latest(&self) -> Option<WorkRecord> {
         self.load_latest_week().and_then(|entries| {
-            let values: Vec<&ActiveProject> = Vec::from_iter(entries.values());
-            let mut values: Vec<ActiveProject> = values.iter()
-                .map(|project_reference: &&ActiveProject| (*project_reference).clone())
+            let values: Vec<&WorkRecord> = Vec::from_iter(entries.values());
+            let mut values: Vec<WorkRecord> = values.iter()
+                .map(|project_reference: &&WorkRecord| (*project_reference).clone())
                 .collect();
             values.sort_by_key(|x| x.start);
             if values.len() == 0  {
                 return None
             }
-            values.get(values.len() - 1).map(|x: &ActiveProject| x.clone())
+            values.get(values.len() - 1).map(|x: &WorkRecord| x.clone())
         })
     }
 
-    fn load_latest_week(&self) -> Option<HashMap<String, ActiveProject>> {
+    fn load_latest_week(&self) -> Option<HashMap<String, WorkRecord>> {
         let mut iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(|it| it.collect());
         match iterator {
             Err(err) => {
@@ -86,7 +86,7 @@ impl WorkRecordRepository {
         }
     }
 
-    pub fn get_by_id(&self, id: String, date: DateTime<Utc>) -> Option<ActiveProject> {
+    pub fn get_by_id(&self, id: String, date: DateTime<Utc>) -> Option<WorkRecord> {
         let path = self.path_of_week(date);
 
         if let Ok(entries) = self.get_all_of_file(&path) {
@@ -96,7 +96,7 @@ impl WorkRecordRepository {
         }
     }
 
-    pub fn persist(&mut self, entity: &ActiveProject) -> io::Result<()> {
+    pub fn persist(&mut self, entity: &WorkRecord) -> io::Result<()> {
         let path = self.path_of_week(entity.start);
 
         let mut entries = self.get_all_of_file(&path)?;
@@ -110,7 +110,7 @@ impl WorkRecordRepository {
         }
     }
 
-    fn get_all_of_file(&self, path: &PathBuf) -> io::Result<HashMap<String, ActiveProject>> {
+    fn get_all_of_file(&self, path: &PathBuf) -> io::Result<HashMap<String, WorkRecord>> {
         if path.is_file() {
             let file = File::open(&path)?;
             Ok(serde_json::from_reader(file).expect(""))
