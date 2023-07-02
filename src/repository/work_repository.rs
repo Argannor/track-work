@@ -20,7 +20,6 @@ trait Repository<T> where T: Entity {
 
 #[derive(Debug)]
 pub struct WorkRecordRepository {
-    path: String,
     subfolder: String,
 }
 
@@ -39,7 +38,6 @@ impl WorkRecordRepository {
         create_dir_if_not_exists(&folder)?;
         let subfolder = folder.into_os_string().into_string().expect("this path should always convert");
         Ok(WorkRecordRepository {
-            path,
             subfolder,
         })
     }
@@ -86,6 +84,7 @@ impl WorkRecordRepository {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_by_id(&self, id: String, date: DateTime<Utc>) -> Option<WorkRecord> {
         let path = self.path_of_week(date);
 

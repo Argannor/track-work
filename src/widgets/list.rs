@@ -72,8 +72,8 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
             .collect();
 
         self.state = ListState::default();
-        if selection.is_some() {
-            let new_selection = self.items_filtered.iter().position(|&x| x == selection.unwrap());
+        if let Some(sel) = selection {
+            let new_selection = self.items_filtered.iter().position(|&x| x == sel);
             self.state.select(new_selection);
         }
     }

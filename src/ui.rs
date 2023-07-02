@@ -72,7 +72,7 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     let text = vec![
         Spans::from(format!("{:?}", app.mode)),
         match app.mode {
-            Mode::NORMAL(_) => Spans::from(vec![
+            Mode::Normal(_) => Spans::from(vec![
                 Span::styled("/", hotkey),
                 Span::raw(" filter mode    "),
                 Span::styled("⏎", hotkey),
@@ -86,7 +86,7 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
                 Span::styled("s", hotkey),
                 Span::raw(" stop ✓     "),
             ]),
-            Mode::FILTER(_) => Spans::from(vec![
+            Mode::Filter(_) => Spans::from(vec![
                 Span::styled("⏎", hotkey),
                 Span::raw(" normal mode    "),
                 // Span::styled("<q>", hotkey),
@@ -120,7 +120,7 @@ fn draw_projects<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         .map(|i| ListItem::new(vec![Spans::from(Span::raw(*i))]))
         .collect();
     let title_color = match (&app.mode, &app.focus) {
-        (Mode::FILTER(_), Focus::PROJECTS) => Color::LightCyan,
+        (Mode::Filter(_), Focus::Projects) => Color::LightCyan,
         _ => Color::White,
     };
     let title: String = if !app.projects.filter.is_empty() {
@@ -130,7 +130,7 @@ fn draw_projects<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     };
     let title = Span::styled(title, Style::default().fg(title_color));
     let mut block = Block::default().borders(Borders::ALL).title(title);
-    if app.focus == Focus::PROJECTS {
+    if app.focus == Focus::Projects {
         block = block.border_style(Style::default().fg(Color::Green));
     }
     let projects = List::new(projects)
@@ -148,7 +148,7 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
 {
 
     let title_color = match (&app.mode, &app.focus) {
-        (Mode::FILTER(_), Focus::PROJECTS) => Color::LightCyan,
+        (Mode::Filter(_), Focus::Projects) => Color::LightCyan,
         _ => Color::White,
     };
     let title: String = if !app.projects.filter.is_empty() {
@@ -159,7 +159,7 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
 
     let mut block = Block::default().borders(Borders::ALL)
         .title(Span::styled(title, Style::default().fg(title_color)));
-    if app.focus == Focus::LOG {
+    if app.focus == Focus::Log {
         block = block.border_style(Style::default().fg(Color::Green));
     }
 

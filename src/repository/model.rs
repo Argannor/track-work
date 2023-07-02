@@ -5,8 +5,8 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TimeKind {
-    PRODUCTIVE,
-    PAUSE
+    Productive,
+    Pause
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -26,9 +26,9 @@ impl TimeSegment {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum ProjectState {
-    WORKING,
-    PAUSED,
-    DONE,
+    Working,
+    Paused,
+    Done,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -45,7 +45,7 @@ pub struct WorkRecord {
 impl WorkRecord {
     pub fn calculate_duration(&self) -> chrono::Duration {
         self.segments.iter()
-            .filter(|segment| segment.kind == TimeKind::PRODUCTIVE)
+            .filter(|segment| segment.kind == TimeKind::Productive)
             .map(|segment| {
                 if let Some(end) = segment.end {
                     end.signed_duration_since(segment.start)
@@ -61,9 +61,9 @@ impl WorkRecord {
 impl Display for WorkRecord {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let icon = match self.state {
-            ProjectState::WORKING => "♪",
-            ProjectState::PAUSED => "𝄽",
-            ProjectState::DONE => "✓"
+            ProjectState::Working => "♪",
+            ProjectState::Paused => "𝄽",
+            ProjectState::Done => "✓"
         };
 
         let mut result = format!(
