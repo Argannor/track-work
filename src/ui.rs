@@ -19,7 +19,7 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     // let chunks = Layout::default()
     //     .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
     //     .split(f.size());
-    draw_first_tab(f, app, f.size())
+    draw_first_tab(f, app, f.size());
 }
 
 fn draw_first_tab<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
@@ -96,7 +96,7 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         Spans::from(""),
         if let Some(ref selected) = app.active_project {
             Spans::from(vec![
-                Span::raw(format!("{}", selected))
+                Span::raw(format!("{selected}"))
             ])
         } else {
             Spans::from("")
@@ -123,10 +123,10 @@ fn draw_projects<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         (Mode::Filter(_), Focus::Projects) => Color::LightCyan,
         _ => Color::White,
     };
-    let title: String = if !app.projects.filter.is_empty() {
-        format!(" Projects (filter: {}) ", app.projects.filter)
-    } else {
+    let title: String = if app.projects.filter.is_empty() {
         " Projects ".to_string()
+    } else {
+        format!(" Projects (filter: {}) ", app.projects.filter)
     };
     let title = Span::styled(title, Style::default().fg(title_color));
     let mut block = Block::default().borders(Borders::ALL).title(title);
@@ -151,10 +151,10 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         (Mode::Filter(_), Focus::Projects) => Color::LightCyan,
         _ => Color::White,
     };
-    let title: String = if !app.projects.filter.is_empty() {
-        format!(" Log (filter: {}) ", app.projects.filter)
-    } else {
+    let title: String = if app.projects.filter.is_empty() {
         " Log ".to_string()
+    } else {
+        format!(" Log (filter: {}) ", app.projects.filter)
     };
 
     let mut block = Block::default().borders(Borders::ALL)
@@ -172,6 +172,6 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
             .collect();
         let log = List::new(messages)
             .block(block);
-        f.render_stateful_widget(log, area, &mut ListState::default())
+        f.render_stateful_widget(log, area, &mut ListState::default());
     }
 }

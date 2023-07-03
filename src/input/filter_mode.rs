@@ -1,7 +1,7 @@
 use crossterm::event::{KeyEvent, KeyEventKind};
 
 use crate::app::App;
-use crate::input::input_handler::InputHandler;
+use crate::input::handler::InputHandler;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct FilterMode {

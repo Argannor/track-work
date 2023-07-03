@@ -1,2 +1,2 @@
-pub mod work_repository;
+pub mod work_record;
 pub mod model;

@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
 use crate::app::App;
-use crate::input::input_handler::InputHandler;
+use crate::input::handler::InputHandler;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct NormalMode {
@@ -9,7 +9,7 @@ pub struct NormalMode {
 }
 
 impl NormalMode {
-    fn on_enter(&self, app: &mut App) {
+    fn on_enter(self, app: &mut App) {
         {
             self.on_stop(app);
         }
@@ -21,17 +21,17 @@ impl NormalMode {
         }
     }
 
-    fn on_pause(&self, app: &mut App) {
+    fn on_pause(self, app: &mut App) {
         if let Some(ref mut active_project) = app.active_project {
             active_project.begin_pause();
         }
     }
-    fn on_resume(&self, app: &mut App) {
+    fn on_resume(self, app: &mut App) {
         if let Some(ref mut active_project) = app.active_project {
             active_project.resume_work();
         }
     }
-    fn on_stop(&self, app: &mut App) {
+    fn on_stop(self, app: &mut App) {
         if let Some(ref mut active_project) = app.active_project {
             active_project.stop();
         }

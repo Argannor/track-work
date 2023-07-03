@@ -31,7 +31,7 @@ impl Entity for WorkRecord {
 
 
 impl WorkRecordRepository {
-    pub fn new(path: String) -> io::Result<WorkRecordRepository> {
+    pub fn new(path: &str) -> io::Result<WorkRecordRepository> {
         let root_path = Path::new(&path);
         create_dir_if_not_exists(root_path)?;
         let folder = root_path.join(Path::new("work_records/"));
@@ -44,7 +44,7 @@ impl WorkRecordRepository {
 
     pub fn get_latest(&self) -> Option<WorkRecord> {
         self.load_latest_week().and_then(|entries| {
-            let values: Vec<&WorkRecord> = Vec::from_iter(entries.values());
+            let values: Vec<&WorkRecord> = entries.values().collect();
             let mut values: Vec<WorkRecord> = values.iter()
                 .map(|project_reference: &&WorkRecord| (*project_reference).clone())
                 .collect();
@@ -57,18 +57,18 @@ impl WorkRecordRepository {
     }
 
     fn load_latest_week(&self) -> Option<HashMap<String, WorkRecord>> {
-        let iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(|it| it.collect());
+        let iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(Iterator::collect);
         match iterator {
             Err(err) => {
                 log!("failed to list files in database directory ({}): {}", &self.subfolder, err);
                 None
             }
             Ok(mut iterator) if !iterator.is_empty() => {
-                iterator.sort_by_key(|dir| dir.path());
+                iterator.sort_by_key(DirEntry::path);
 
                 let latest: Option<&DirEntry> = iterator.last();
                 if let Some(latest) = latest {
-                    let result = self.get_all_of_file(&latest.path());
+                    let result = WorkRecordRepository::get_all_of_file(&latest.path());
                     match result {
                         Ok(items) => Some(items),
                         Err(e) => {
@@ -85,11 +85,11 @@ impl WorkRecordRepository {
     }
 
     #[allow(dead_code)]
-    pub fn get_by_id(&self, id: String, date: DateTime<Utc>) -> Option<WorkRecord> {
+    pub fn get_by_id(&self, id: &str, date: DateTime<Utc>) -> Option<WorkRecord> {
         let path = self.path_of_week(date);
 
-        if let Ok(entries) = self.get_all_of_file(&path) {
-            entries.get(&id).map(|x| (*x).clone())
+        if let Ok(entries) = WorkRecordRepository::get_all_of_file(&path) {
+            entries.get(id).map(|x| (*x).clone())
         } else {
             None
         }
@@ -98,7 +98,7 @@ impl WorkRecordRepository {
     pub fn persist(&mut self, entity: &WorkRecord) -> io::Result<()> {
         let path = self.path_of_week(entity.start);
 
-        let mut entries = self.get_all_of_file(&path)?;
+        let mut entries = WorkRecordRepository::get_all_of_file(&path)?;
 
         entries.insert(entity.id.clone(), entity.clone());
 
@@ -109,7 +109,7 @@ impl WorkRecordRepository {
         }
     }
 
-    fn get_all_of_file(&self, path: &PathBuf) -> io::Result<HashMap<String, WorkRecord>> {
+    fn get_all_of_file(path: &PathBuf) -> io::Result<HashMap<String, WorkRecord>> {
         if path.is_file() {
             let file = File::open(path)?;
             Ok(serde_json::from_reader(file).expect(""))

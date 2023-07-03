@@ -53,7 +53,7 @@ impl WorkRecord {
                     Utc::now().signed_duration_since(segment.start)
                 }
             })
-            .reduce(|a,b| a.add(b))
+            .reduce(Add::add)
             .expect("There should always be at least one segment to calculate a Duration")
     }
 }

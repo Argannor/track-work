@@ -9,17 +9,17 @@ use uuid::Uuid;
 
 use crate::app::ProjectState::Working;
 use crate::input::filter_mode::FilterMode;
-use crate::input::input_handler::InputHandler;
+use crate::input::handler::InputHandler;
 use crate::input::normal_mode::NormalMode;
 use crate::log::{LOG, log};
 use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
-use crate::repository::work_repository::WorkRecordRepository;
+use crate::repository::work_record::WorkRecordRepository;
 use crate::SETTINGS;
 use crate::widgets::list::StatefulList;
 
 static WORK_RECORD_REPO: Lazy<Mutex<WorkRecordRepository>> = Lazy::new(||
     Mutex::new(WorkRecordRepository::new(
-        env::current_dir().expect("cwd is not set")
+        &env::current_dir().expect("cwd is not set")
             .into_os_string().into_string()
             .expect("could not convert cwd to string")
     ).expect("could not create database")));
@@ -46,7 +46,7 @@ pub struct ActiveProject {
 
 impl Drop for ActiveProject {
     fn drop(&mut self) {
-        self.stop()
+        self.stop();
     }
 }
 
@@ -169,29 +169,29 @@ impl<'a> App<'a> {
     }
 
     fn set_mode(&mut self, mode: Mode) {
-        self.mode = mode
+        self.mode = mode;
     }
 
     fn normal_mode(&mut self) {
-        self.set_mode(Mode::Normal(NormalMode {}))
+        self.set_mode(Mode::Normal(NormalMode {}));
     }
 
     fn filter_mode(&mut self) {
-        self.set_mode(Mode::Filter(FilterMode {}))
+        self.set_mode(Mode::Filter(FilterMode {}));
     }
 
     fn focus_next(&mut self) {
         self.focus = match self.focus {
             Focus::Projects => Focus::Log,
             Focus::Log => Focus::Projects,
-        }
+        };
     }
 
     fn focus_previous(&mut self) {
         self.focus = match self.focus {
             Focus::Projects => Focus::Log,
             Focus::Log => Focus::Projects,
-        }
+        };
     }
 
     pub fn start_working_on(&mut self, project: String) {
@@ -226,7 +226,7 @@ impl<'a> App<'a> {
     pub fn get_focus(&mut self) -> Option<&mut dyn Focusable> {
         match self.focus {
             Focus::Projects => Some(&mut self.projects),
-            _ => None
+            Focus::Log => None
         }
     }
 

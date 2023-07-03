@@ -16,7 +16,7 @@ pub struct StatefulList<T> {
 
 impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-        let copy_of_items = items.to_vec();
+        let copy_of_items = items.clone();
 
         let mut state = ListState::default();
         state.select(Some(0));
@@ -25,7 +25,7 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
             state,
             items,
             items_filtered: copy_of_items,
-            filter: "".to_string(),
+            filter: String::new(),
         }
     }
 
@@ -66,7 +66,7 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
         let selection = self.state.selected()
             .and_then(|x| self.items_filtered.get(x)).copied();
         self.items_filtered = self.items.iter()
-            .map(|x| (x, matcher.fuzzy_match(format!("{}", x).as_str(), self.filter.as_str())))
+            .map(|x| (x, matcher.fuzzy_match(format!("{x}").as_str(), self.filter.as_str())))
             .filter(|(_, fuzz)| fuzz.is_some())
             .map(|(x, _)| *x)
             .collect();
