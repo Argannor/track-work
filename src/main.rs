@@ -6,6 +6,7 @@ use std::sync::RwLock;
 use config::Config;
 
 use crate::crossterm::run;
+use crate::app_config::AppConfig;
 
 mod app;
 mod input;
@@ -15,16 +16,19 @@ mod ui;
 mod repository;
 #[macro_use]
 mod log;
+mod app_config;
 
 lazy_static! {
-    pub static ref SETTINGS: RwLock<Config> = RwLock::new(Config::builder()
+    pub static ref SETTINGS: RwLock<AppConfig> = RwLock::new(Config::builder()
         // Add in `./config.{yml|toml}`
         .add_source(config::File::with_name("config"))
         // Add in settings from the environment (with a prefix of TRACK_WORK)
         // Eg.. `TRACK_WORK_DEBUG=1 ./target/app` would set the `debug` key
         .add_source(config::Environment::with_prefix("TRACK_WORK"))
         .build()
-        .unwrap());
+        .unwrap()
+        .try_into()
+        .expect("Config malformed"));
 }
 
 /// Demo

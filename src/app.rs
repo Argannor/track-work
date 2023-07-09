@@ -144,9 +144,9 @@ fn string_to_static_string(s: String) -> &'static str {
 impl<'a> App<'a> {
     pub fn new(title: &'a str, enhanced_graphics: bool) -> App<'a> {
         let projects: Vec<&'static str> = SETTINGS.read().expect("could not acquire read lock on app settings")
-            .get_array("projects").expect("you need to configure the `projects`")
+            .projects
             .iter()
-            .map(|val| val.clone().into_string().expect("projects must be strings")) // TODO: refactor config into proper struct
+            .map(|p| p.name.clone())
             .map(string_to_static_string)
             .collect();
         App {

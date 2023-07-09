@@ -1,4 +1,4 @@
 projects:
-  - Xorcery
-  - EKS
-  - Swag
+  - name: Xorcery
+  - name: EKS
+  - name: Swag
