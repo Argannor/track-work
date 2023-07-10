@@ -1,4 +1,12 @@
 projects:
   - name: Xorcery
+    windows:
+      - Windows PowerShell
+      - "track-work"
   - name: EKS
+    windows:
+      - "@davidgiga1993 - Discord"
   - name: Swag
+
+logging:
+  windowChanges: true

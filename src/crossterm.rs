@@ -15,6 +15,7 @@ use tui::{
 };
 
 use crate::{app::App, ui};
+use crate::win::focus_watcher::watch_foreground_windows;
 
 pub fn run(tick_rate: Duration, enhanced_graphics: bool) -> Result<(), Box<dyn Error>> {
     // setup terminal
@@ -50,6 +51,7 @@ fn run_app<B: Backend>(
     tick_rate: Duration,
 ) -> io::Result<()> {
     let mut last_tick = Instant::now();
+    let rx = watch_foreground_windows(Duration::from_millis(500), Duration::from_secs(2));
     loop {
         terminal.draw(|f| ui::draw(f, &mut app))?;
 
@@ -60,6 +62,9 @@ fn run_app<B: Backend>(
             if let Event::Key(key) = event::read()? {
                 app.on_input(key);
             }
+        }
+        if let Ok(window_title) = rx.try_recv() {
+            app.on_window_focus_changed(window_title);
         }
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();

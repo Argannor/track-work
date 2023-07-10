@@ -751,6 +751,7 @@ dependencies = [
  "serde_json",
  "tui",
  "uuid",
+ "windows",
 ]
 
 [[package]]

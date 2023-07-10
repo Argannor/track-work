@@ -1,5 +1,6 @@
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
+use std::ops::Deref;
 use std::sync::Mutex;
 
 use chrono::Utc;
@@ -8,6 +9,7 @@ use once_cell::sync::Lazy;
 use uuid::Uuid;
 
 use crate::app::ProjectState::Working;
+use crate::app_config::AppConfig;
 use crate::input::filter_mode::FilterMode;
 use crate::input::handler::InputHandler;
 use crate::input::normal_mode::NormalMode;
@@ -129,6 +131,7 @@ impl Display for ActiveProject {
 
 pub struct App<'a> {
     pub title: &'a str,
+    pub config: AppConfig,
     pub should_quit: bool,
     pub projects: StatefulList<&'a str>,
     pub enhanced_graphics: bool,
@@ -143,7 +146,9 @@ fn string_to_static_string(s: String) -> &'static str {
 
 impl<'a> App<'a> {
     pub fn new(title: &'a str, enhanced_graphics: bool) -> App<'a> {
-        let projects: Vec<&'static str> = SETTINGS.read().expect("could not acquire read lock on app settings")
+        let config = SETTINGS.read().expect("could not acquire read lock on app settings");
+        let config = config.deref().clone();
+        let projects: Vec<&'static str> = config
             .projects
             .iter()
             .map(|p| p.name.clone())
@@ -151,6 +156,7 @@ impl<'a> App<'a> {
             .collect();
         App {
             title,
+            config,
             should_quit: false,
             projects: StatefulList::with_items(projects),
             focus: Focus::Projects,
@@ -196,6 +202,9 @@ impl<'a> App<'a> {
 
     pub fn start_working_on(&mut self, project: String) {
         if let Some(ref mut current_project) = self.active_project {
+            if current_project.record.name == project {
+                return;
+            }
             current_project.stop();
         }
         self.active_project = Some(ActiveProject::new(project));
@@ -215,6 +224,23 @@ impl<'a> App<'a> {
 
             (Mode::Normal(ref mode), _, _) => mode.on_input(event, self),
             (Mode::Filter(ref mode), _, _) => mode.on_input(event, self),
+        }
+    }
+
+    pub(crate) fn on_window_focus_changed(&mut self, window_title: String) {
+        if self.config.logging.window_change {
+            log!("title changed: {}", window_title)
+        }
+        let mut associated_project: Option<String> = None;
+        for project in &self.config.projects {
+            for window in &project.windows {
+                if window_title.to_lowercase().starts_with(&window.to_lowercase()) {
+                    associated_project = Some(project.name.clone());
+                }
+            }
+        }
+        if let Some(project) = associated_project {
+            self.start_working_on(project)
         }
     }
 

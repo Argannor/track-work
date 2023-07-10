@@ -1,12 +1,12 @@
 use std::{error::Error, time::Duration};
+use std::sync::RwLock;
 
 use argh::FromArgs;
-use lazy_static::lazy_static;
-use std::sync::RwLock;
 use config::Config;
+use lazy_static::lazy_static;
 
-use crate::crossterm::run;
 use crate::app_config::AppConfig;
+use crate::crossterm::run;
 
 mod app;
 mod input;
@@ -14,6 +14,7 @@ mod widgets;
 mod crossterm;
 mod ui;
 mod repository;
+mod win;
 #[macro_use]
 mod log;
 mod app_config;
