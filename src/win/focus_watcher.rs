@@ -40,7 +40,7 @@ impl WindowFocus {
         if handle == self.no_handle {
             return self.title.clone();
         }
-        let length = unsafe { WindowsAndMessaging::GetWindowTextW(handle.clone(), &mut self.buffer) };
+        let length = unsafe { WindowsAndMessaging::GetWindowTextW(handle, &mut self.buffer) };
         if length > 0 {
             self.title = String::from_utf16_lossy(&self.buffer[0..length as usize]);
         }

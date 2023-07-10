@@ -12,7 +12,7 @@ pub struct ProjectConfig {
     pub windows: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct LoggingConfig {
    pub window_change: bool
 }
@@ -68,13 +68,5 @@ impl TryFrom<&Value> for ProjectConfig {
             name: table.get("name").expect("already tested before").clone().into_string().expect("project.name must be of type string"),
             windows
         })
-    }
-}
-
-impl Default for LoggingConfig {
-    fn default() -> Self {
-        LoggingConfig {
-            window_change: false
-        }
     }
 }
