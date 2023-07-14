@@ -51,7 +51,7 @@ fn run_app<B: Backend>(
     tick_rate: Duration,
 ) -> io::Result<()> {
     let mut last_tick = Instant::now();
-    let rx = watch_foreground_windows(Duration::from_millis(500), Duration::from_secs(2));
+    let rx = watch_foreground_windows(Duration::from_millis(500), Duration::from_secs(30));
     loop {
         terminal.draw(|f| ui::draw(f, &mut app))?;
 
