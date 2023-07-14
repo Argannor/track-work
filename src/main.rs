@@ -29,7 +29,7 @@ lazy_static! {
         .add_source(config::Environment::with_prefix("TRACK_WORK"))
         .build()
         .unwrap()
-        .try_into()
+        .try_deserialize::<AppConfig>()
         .expect("Config malformed"));
 }
 

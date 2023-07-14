@@ -26,5 +26,11 @@ clients:
     data:
       psp: IT.3
 
+breaks:
+  windows:
+    - Windows-Standardsperrbildschirm
+    - WhatsApp
+  autoResume: true
+
 logging:
-  windowChanges: true
+  windowChange: true
