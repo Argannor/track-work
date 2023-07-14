@@ -158,6 +158,7 @@ pub struct App<'a> {
     pub mode: Mode,
     pub active_project: Option<ActiveProject>,
     pub report: ReportState,
+    pub auto_break: bool,
 }
 
 fn string_to_static_string(s: String) -> &'static str {
@@ -184,6 +185,7 @@ impl<'a> App<'a> {
             enhanced_graphics,
             active_project: ActiveProject::load_previous(),
             report: ReportState::default(),
+            auto_break: false,
         }
     }
 
@@ -271,6 +273,16 @@ impl<'a> App<'a> {
         if self.config.logging.window_change {
             log!("title changed: {}", window_title)
         }
+        // if we previously went on auto break and auto resume is configured, resume
+        if self.auto_break && self.config.breaks.auto_resume {
+            if let Some(ref mut active_project) = self.active_project {
+                log!("♪ resuming work");
+                active_project.resume_work();
+            }
+        }
+        self.auto_break = false;
+
+        // go over the list of projects and there window title (prefixes)
         let mut associated_project: Option<String> = None;
         for project in &self.config.projects {
             for window in &project.windows {
@@ -279,8 +291,22 @@ impl<'a> App<'a> {
                 }
             }
         }
+        // if a project was found, start work on that project
         if let Some(project) = associated_project {
-            self.start_working_on(project)
+            self.start_working_on(project);
+            return;
+        }
+
+        // check if the window is configured for auto break
+        let go_on_break = self.config.breaks.windows.iter()
+            .any(|title| window_title.to_lowercase().starts_with(&title.to_lowercase()));
+        if go_on_break {
+            if let Some(ref mut active_project) = self.active_project {
+                // start the break and set auto_break, so we can auto resume if configured
+                log!("𝄽 pausing work");
+                active_project.begin_pause();
+                self.auto_break = true;
+            }
         }
     }
 
