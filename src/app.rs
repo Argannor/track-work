@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 use std::sync::Mutex;
 
-use chrono::Utc;
+use chrono::{NaiveTime, TimeZone, Utc};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use once_cell::sync::Lazy;
 use uuid::Uuid;
@@ -18,6 +18,8 @@ use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
 use crate::repository::work_record::WorkRecordRepository;
 use crate::SETTINGS;
 use crate::widgets::list::StatefulList;
+use crate::report::Report;
+use crate::widgets::week_picker::WeekPickerState;
 
 static WORK_RECORD_REPO: Lazy<Mutex<WorkRecordRepository>> = Lazy::new(||
     Mutex::new(WorkRecordRepository::new(
@@ -40,10 +42,11 @@ pub enum Mode {
 pub enum Focus {
     Projects,
     Log,
+    Report,
 }
 
 pub struct ActiveProject {
-    record: WorkRecord
+    record: WorkRecord,
 }
 
 impl Drop for ActiveProject {
@@ -53,9 +56,8 @@ impl Drop for ActiveProject {
 }
 
 impl ActiveProject {
-
     pub fn load_previous() -> Option<ActiveProject> {
-        WORK_RECORD_REPO.lock().unwrap().get_latest().map(|record| ActiveProject{record})
+        WORK_RECORD_REPO.lock().unwrap().get_latest().map(|record| ActiveProject { record })
     }
 
     pub fn new(name: String) -> ActiveProject {
@@ -67,10 +69,10 @@ impl ActiveProject {
             start,
             end: None,
             state: Working,
-            segments: vec![TimeSegment{
+            segments: vec![TimeSegment {
                 start,
                 end: None,
-                kind: TimeKind::Productive
+                kind: TimeKind::Productive,
             }],
         };
         log!("{}", work_record);
@@ -78,7 +80,7 @@ impl ActiveProject {
             log!("failed to save work record for {}: {}", work_record.name, e);
         }
 
-        ActiveProject{record: work_record}
+        ActiveProject { record: work_record }
     }
 
     pub fn begin_pause(&mut self) {
@@ -86,10 +88,10 @@ impl ActiveProject {
         if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
         }
-        self.record.segments.push(TimeSegment{
+        self.record.segments.push(TimeSegment {
             start: Utc::now(),
             end: None,
-            kind: TimeKind::Pause
+            kind: TimeKind::Pause,
         });
     }
 
@@ -98,10 +100,10 @@ impl ActiveProject {
         if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
         }
-        self.record.segments.push(TimeSegment{
+        self.record.segments.push(TimeSegment {
             start: Utc::now(),
             end: None,
-            kind: TimeKind::Productive
+            kind: TimeKind::Productive,
         });
     }
 
@@ -119,7 +121,6 @@ impl ActiveProject {
             log!("failed to save work record for {}: {}", self.record.name, e);
         }
     }
-
 }
 
 impl Display for ActiveProject {
@@ -128,6 +129,24 @@ impl Display for ActiveProject {
     }
 }
 
+#[derive(Default)]
+pub struct ReportState {
+    pub weekpicker: WeekPickerState,
+    pub report: Option<Report>,
+}
+
+impl ReportState {
+    pub fn calculate(&mut self) {
+        let (start, _) = self.weekpicker.start_and_end();
+        let start = Utc.from_local_datetime(&start.and_time(NaiveTime::default())).unwrap();
+        let records = WORK_RECORD_REPO.lock().unwrap().find_week(start);
+        if let Ok(records) = records {
+            self.report = Some(Report::new_pct(records))
+        } else {
+            self.report = None;
+        }
+    }
+}
 
 pub struct App<'a> {
     pub title: &'a str,
@@ -138,6 +157,7 @@ pub struct App<'a> {
     pub focus: Focus,
     pub mode: Mode,
     pub active_project: Option<ActiveProject>,
+    pub report: ReportState,
 }
 
 fn string_to_static_string(s: String) -> &'static str {
@@ -163,6 +183,7 @@ impl<'a> App<'a> {
             mode: Mode::Normal(NormalMode {}),
             enhanced_graphics,
             active_project: ActiveProject::load_previous(),
+            report: ReportState::default(),
         }
     }
 
@@ -190,6 +211,7 @@ impl<'a> App<'a> {
         self.focus = match self.focus {
             Focus::Projects => Focus::Log,
             Focus::Log => Focus::Projects,
+            Focus::Report => Focus::Report
         };
     }
 
@@ -197,6 +219,7 @@ impl<'a> App<'a> {
         self.focus = match self.focus {
             Focus::Projects => Focus::Log,
             Focus::Log => Focus::Projects,
+            Focus::Report => Focus::Report
         };
     }
 
@@ -211,9 +234,13 @@ impl<'a> App<'a> {
     }
 
     pub fn on_input(&mut self, event: KeyEvent) {
+        if self.focus == Focus::Report && self.on_report_input(event) {
+            return;
+        }
         match (self.mode, event.code, event.kind) {
             (Mode::Normal(_), KeyCode::Char('/'), KeyEventKind::Release) => self.filter_mode(),
             (Mode::Normal(_), KeyCode::Char('q'), KeyEventKind::Release) => self.should_quit = true,
+            (Mode::Normal(_), KeyCode::Char('x'), KeyEventKind::Release) => self.focus = if self.focus == Focus::Report { Focus::Projects } else { Focus::Report },
             (Mode::Filter(_), KeyCode::Enter | KeyCode::Esc, KeyEventKind::Release) => self.normal_mode(),
 
             (_, KeyCode::Up, KeyEventKind::Press | KeyEventKind::Repeat) => self.on_up(),
@@ -225,6 +252,19 @@ impl<'a> App<'a> {
             (Mode::Normal(ref mode), _, _) => mode.on_input(event, self),
             (Mode::Filter(ref mode), _, _) => mode.on_input(event, self),
         }
+    }
+
+    fn on_report_input(&mut self, event: KeyEvent) -> bool {
+        let mut handled = true;
+        match (event.code, event.kind) {
+            (KeyCode::Left, KeyEventKind::Press | KeyEventKind::Repeat) => self.report.weekpicker.decrement(),
+            (KeyCode::Right, KeyEventKind::Press | KeyEventKind::Repeat) => self.report.weekpicker.increment(),
+            (KeyCode::Enter, KeyEventKind::Release) => self.report.calculate(),
+            (KeyCode::Esc, KeyEventKind::Release) => self.focus = Focus::Projects,
+
+            _ => handled = false
+        }
+        handled
     }
 
     pub(crate) fn on_window_focus_changed(&mut self, window_title: String) {
@@ -252,7 +292,8 @@ impl<'a> App<'a> {
     pub fn get_focus(&mut self) -> Option<&mut dyn Focusable> {
         match self.focus {
             Focus::Projects => Some(&mut self.projects),
-            Focus::Log => None
+            Focus::Log => None,
+            Focus::Report => None,
         }
     }
 
@@ -268,5 +309,4 @@ impl<'a> App<'a> {
         //     focus.on_input(self, event);
         // }
     }
-
 }

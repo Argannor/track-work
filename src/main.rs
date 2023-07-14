@@ -18,6 +18,7 @@ mod win;
 #[macro_use]
 mod log;
 mod app_config;
+mod report;
 
 lazy_static! {
     pub static ref SETTINGS: RwLock<AppConfig> = RwLock::new(Config::builder()

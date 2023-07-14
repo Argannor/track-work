@@ -1,3 +1,4 @@
+
 use tui::{
     backend::Backend,
     Frame,
@@ -8,12 +9,16 @@ use tui::{
         Block, Borders, List, ListItem,
     },
 };
-use tui::layout::Direction;
+use tui::layout::{Direction, Margin};
 use tui::style::Color;
-use tui::widgets::{ListState, Paragraph, Wrap};
+
+use tui::widgets::{Clear, ListState, Paragraph, Table, Wrap};
+
 
 use crate::app::{App, Focus, Mode};
+
 use crate::log::LOG;
+use crate::widgets::week_picker::{WeekPicker};
 
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     // let chunks = Layout::default()
@@ -60,8 +65,37 @@ fn draw_first_tab<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
 
     draw_projects(f, app, columns[0]);
     draw_log(f, app, columns[1]);
+    if app.focus == Focus::Report {
+        draw_report(f, app, rows[1])
+    }
 }
 
+fn draw_report<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
+    where
+        B: Backend,
+{
+    let inner = area.inner(&Margin { vertical: 10, horizontal: 10 });
+
+
+    let rows = Layout::default().direction(Direction::Vertical).constraints([
+        Constraint::Length(3),
+        Constraint::Length(3),
+        Constraint::Percentage(100)
+    ]).split(inner.inner(&Margin{vertical:0, horizontal: 1}));
+
+    let block = Block::default().borders(Borders::ALL).style(Style::default().bg(Color::Rgb(0x11, 0x11, 0x15)));
+    let paragraph = Paragraph::new(Span::from("Report")).block(block).wrap(Wrap { trim: true });
+    let picker = WeekPicker{};
+    f.render_widget(Clear, inner);
+    f.render_widget(paragraph, inner);
+    f.render_stateful_widget(picker, rows[1], &mut app.report.weekpicker);
+
+    if let Some(report) = &app.report.report {
+        let record_rows: Vec<tui::widgets::Row> = report.rows.iter().map(|x| x.into()).collect();
+        let table: Table = Table::new(record_rows).widths(&[Constraint::Length(20), Constraint::Length(20)]);
+        f.render_widget(table, rows[2])
+    }
+}
 
 fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     where
@@ -85,6 +119,8 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
                 Span::raw(" resume ♪     "),
                 Span::styled("s", hotkey),
                 Span::raw(" stop ✓     "),
+                Span::styled("x", hotkey),
+                Span::raw(" report     "),
             ]),
             Mode::Filter(_) => Spans::from(vec![
                 Span::styled("⏎", hotkey),
@@ -146,7 +182,6 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     where
         B: Backend,
 {
-
     let title_color = match (&app.mode, &app.focus) {
         (Mode::Filter(_), Focus::Projects) => Color::LightCyan,
         _ => Color::White,

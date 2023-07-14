@@ -56,6 +56,15 @@ impl WorkRecordRepository {
         })
     }
 
+    pub fn find_week(&self, start: DateTime<Utc>) -> io::Result<Vec<WorkRecord>> {
+        let path = self.path_of_week(start);
+        let records: Vec<WorkRecord> = WorkRecordRepository::get_all_of_file(&path)?
+            .values()
+            .cloned()
+            .collect();
+        Ok(records)
+    }
+
     fn load_latest_week(&self) -> Option<HashMap<String, WorkRecord>> {
         let iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(Iterator::collect);
         match iterator {

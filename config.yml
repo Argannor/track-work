@@ -1,12 +1,30 @@
 projects:
-  - name: Xorcery
+  - name: Awesome Project
     windows:
       - Windows PowerShell
       - "track-work"
+    clients:
+      - name: XO
   - name: EKS
     windows:
       - "@davidgiga1993 - Discord"
+    clients:
+      - name: Innovation
+        ratio: 0.75
+      - name: Maintenance
+        ratio: 0.25
   - name: Swag
+
+clients:
+  - name: XO
+    data:
+      psp: IT.1
+  - name: Innovation
+    data:
+      psp: IT.2
+  - name: Maintenance
+    data:
+      psp: IT.3
 
 logging:
   windowChanges: true
