@@ -121,6 +121,8 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
                 Span::raw(" stop ✓     "),
                 Span::styled("x", hotkey),
                 Span::raw(" report     "),
+                Span::styled("a", hotkey),
+                Span::raw(format!(" {} auto switch     ", if app.auto_switch { "disable"} else { "enable" })),
             ]),
             Mode::Filter(_) => Spans::from(vec![
                 Span::styled("⏎", hotkey),

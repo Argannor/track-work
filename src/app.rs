@@ -159,6 +159,7 @@ pub struct App<'a> {
     pub active_project: Option<ActiveProject>,
     pub report: ReportState,
     pub auto_break: bool,
+    pub auto_switch: bool,
 }
 
 fn string_to_static_string(s: String) -> &'static str {
@@ -186,6 +187,7 @@ impl<'a> App<'a> {
             active_project: ActiveProject::load_previous(),
             report: ReportState::default(),
             auto_break: false,
+            auto_switch: true
         }
     }
 
@@ -244,6 +246,7 @@ impl<'a> App<'a> {
             (Mode::Normal(_), KeyCode::Char('q'), KeyEventKind::Release) => self.should_quit = true,
             (Mode::Normal(_), KeyCode::Char('x'), KeyEventKind::Release) => self.focus = if self.focus == Focus::Report { Focus::Projects } else { Focus::Report },
             (Mode::Filter(_), KeyCode::Enter | KeyCode::Esc, KeyEventKind::Release) => self.normal_mode(),
+            (_, KeyCode::Char('a'), KeyEventKind::Press | KeyEventKind::Repeat) => self.auto_switch = !self.auto_switch,
 
             (_, KeyCode::Up, KeyEventKind::Press | KeyEventKind::Repeat) => self.on_up(),
             (_, KeyCode::Down, KeyEventKind::Press | KeyEventKind::Repeat) => self.on_down(),
@@ -270,6 +273,9 @@ impl<'a> App<'a> {
     }
 
     pub(crate) fn on_window_focus_changed(&mut self, window_title: String) {
+        if !self.auto_switch {
+            return;
+        }
         if self.config.logging.window_change {
             log!("title changed: {}", window_title)
         }
