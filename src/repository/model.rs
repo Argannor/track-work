@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::Add;
-use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TimeKind {
@@ -41,10 +41,10 @@ pub struct WorkRecord {
     pub segments: Vec<TimeSegment>,
 }
 
-
 impl WorkRecord {
     pub fn calculate_duration(&self) -> chrono::Duration {
-        self.segments.iter()
+        self.segments
+            .iter()
             .filter(|segment| segment.kind == TimeKind::Productive)
             .map(|segment| {
                 if let Some(end) = segment.end {
@@ -63,11 +63,15 @@ impl Display for WorkRecord {
         let icon = match self.state {
             ProjectState::Working => "♪",
             ProjectState::Paused => "𝄽",
-            ProjectState::Done => "✓"
+            ProjectState::Done => "✓",
         };
 
         let end_description = if let Some(end) = self.end {
-            format!(" - {}", end.with_timezone(chrono::Local::now().offset()).format("%H:%M"))
+            format!(
+                " - {}",
+                end.with_timezone(chrono::Local::now().offset())
+                    .format("%H:%M")
+            )
         } else {
             "".to_string()
         };
@@ -78,9 +82,13 @@ impl Display for WorkRecord {
             "{} {}: {}{} (time spent: {:02}:{:02}:{:02})",
             icon,
             self.name,
-            self.start.with_timezone(chrono::Local::now().offset()).format("%Y-%m-%d %H:%M"),
+            self.start
+                .with_timezone(chrono::Local::now().offset())
+                .format("%Y-%m-%d %H:%M"),
             end_description,
-            duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
+            duration.num_hours(),
+            duration.num_minutes() % 60,
+            duration.num_seconds() % 60
         );
 
         f.write_str(&result)

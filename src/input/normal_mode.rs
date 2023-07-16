@@ -4,9 +4,7 @@ use crate::app::App;
 use crate::input::handler::InputHandler;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
-pub struct NormalMode {
-
-}
+pub struct NormalMode {}
 
 impl NormalMode {
     fn on_enter(self, app: &mut App) {

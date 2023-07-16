@@ -1,11 +1,14 @@
-use std::sync::mpsc::{Receiver, sync_channel};
+use std::sync::mpsc::{sync_channel, Receiver};
 use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::WindowsAndMessaging;
 
-pub fn watch_foreground_windows(polling_interval: Duration, threshold: Duration) -> Receiver<String> {
+pub fn watch_foreground_windows(
+    polling_interval: Duration,
+    threshold: Duration,
+) -> Receiver<String> {
     let (tx, rx) = sync_channel::<String>(1);
     thread::spawn(move || {
         let mut monitor = ChangeMonitor::new(String::new(), threshold);
@@ -22,7 +25,6 @@ pub fn watch_foreground_windows(polling_interval: Duration, threshold: Duration)
                 }
             }
         }
-
     });
 
     rx
@@ -50,30 +52,32 @@ impl WindowFocus {
 
 impl Default for WindowFocus {
     fn default() -> Self {
-        WindowFocus{
+        WindowFocus {
             buffer: [0; 128],
-            no_handle: HWND::default()
+            no_handle: HWND::default(),
         }
     }
 }
-
 
 struct ChangeMonitor<T> {
     change_date: Instant,
     threshold: Duration,
     last_value: T,
     last_notified: T,
-    notified: bool
+    notified: bool,
 }
 
-impl<T> ChangeMonitor<T> where T: PartialEq + Clone {
+impl<T> ChangeMonitor<T>
+where
+    T: PartialEq + Clone,
+{
     pub fn new(initial_value: T, threshold: Duration) -> ChangeMonitor<T> {
         ChangeMonitor {
             change_date: Instant::now(),
             threshold,
             last_value: initial_value.clone(),
             last_notified: initial_value,
-            notified: false
+            notified: false,
         }
     }
 
@@ -87,7 +91,10 @@ impl<T> ChangeMonitor<T> where T: PartialEq + Clone {
     }
 
     pub fn poll(&mut self) -> Option<T> {
-        if self.notified || self.last_notified == self.last_value || (Instant::now() - self.change_date) < self.threshold {
+        if self.notified
+            || self.last_notified == self.last_value
+            || (Instant::now() - self.change_date) < self.threshold
+        {
             None
         } else {
             self.notified = true;

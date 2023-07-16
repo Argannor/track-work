@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -25,7 +24,7 @@ pub struct ProjectConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProjectClient {
     pub name: String,
-    #[serde(default="default_ratio")]
+    #[serde(default = "default_ratio")]
     pub ratio: f64,
 }
 
@@ -38,7 +37,7 @@ pub struct Client {
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct LoggingConfig {
-    #[serde(alias="windowChange")]
+    #[serde(alias = "windowChange")]
     pub window_change: bool,
 }
 
@@ -46,11 +45,13 @@ pub struct LoggingConfig {
 pub struct BreakConfig {
     #[serde(default)]
     pub windows: Vec<String>,
-    #[serde(default,alias="autoResume")]
-    pub auto_resume: bool
+    #[serde(default, alias = "autoResume")]
+    pub auto_resume: bool,
 }
 
-fn default_ratio() -> f64 { 1. }
+fn default_ratio() -> f64 {
+    1.
+}
 
 #[cfg(test)]
 mod tests {
@@ -60,7 +61,9 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let cfg = config::Config::builder().add_source(File::from_str("
+        let cfg = config::Config::builder()
+            .add_source(File::from_str(
+                "
 projects:
   - name: Xorcery
     windows:
@@ -96,8 +99,14 @@ breaks:
   autoResume: true
 
 logging:
-  windowChange: true", FileFormat::Yaml)).build();
-        let app_cfg: AppConfig = cfg.unwrap().try_deserialize().expect("should be a valid config");
+  windowChange: true",
+                FileFormat::Yaml,
+            ))
+            .build();
+        let app_cfg: AppConfig = cfg
+            .unwrap()
+            .try_deserialize()
+            .expect("should be a valid config");
         assert_eq!(app_cfg.projects[0].name, "Xorcery");
         assert_eq!(app_cfg.projects[0].windows[0], "Windows PowerShell");
         assert_eq!(app_cfg.projects[0].clients[0].name, "XO");

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use chrono::{Datelike, DateTime, NaiveDate, TimeZone};
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone};
 
 /// Trait to abstract over different Date-related types that need to be converted to an ISO-Week
 /// string
@@ -9,7 +9,10 @@ pub trait Week {
     fn to_week(&self) -> String;
 }
 
-impl <Tz: TimeZone> Week for DateTime<Tz> where Tz::Offset: Display {
+impl<Tz: TimeZone> Week for DateTime<Tz>
+where
+    Tz::Offset: Display,
+{
     fn to_week(&self) -> String {
         format!("{}", self.format("%Y-%U"))
     }

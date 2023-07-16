@@ -1,8 +1,8 @@
-use std::fmt::{Display};
+use std::fmt::Display;
 
 use crossterm::event::{KeyCode, KeyEvent};
-use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use tui::widgets::ListState;
 
 use crate::app::Focusable;
@@ -12,10 +12,13 @@ pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
     pub items_filtered: Vec<T>,
-    pub filter: String
+    pub filter: String,
 }
 
-impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
+impl<T> StatefulList<T>
+where
+    T: Copy + Display + PartialEq<T>,
+{
     pub fn with_items<I: IntoIterator<Item = T>>(items: I) -> StatefulList<T> {
         let items: Vec<T> = items.into_iter().collect();
         let copy_of_items: Vec<T> = items.clone();
@@ -63,16 +66,22 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     }
 
     pub fn get_selected(&self) -> Option<&T> {
-        self.state.selected().and_then(|index| { self.items.get(index)})
+        self.state
+            .selected()
+            .and_then(|index| self.items.get(index))
     }
 
     fn filter(&mut self) {
         let matcher = SkimMatcherV2::default();
-        let selection = self.state.selected()
+        let selection = self
+            .state
+            .selected()
             .and_then(|x| self.items_filtered.get(x))
             .cloned();
         let filter = self.filter.as_str();
-        self.items_filtered = self.items.iter()
+        self.items_filtered = self
+            .items
+            .iter()
             .map(|x| (x, matcher.fuzzy_match(format!("{x}").as_str(), filter)))
             .filter(|(_, fuzz)| fuzz.is_some())
             .map(|(x, _)| *x)
@@ -86,7 +95,10 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     }
 }
 
-impl<T> Focusable for StatefulList<T> where T: Copy + Display + PartialEq<T> {
+impl<T> Focusable for StatefulList<T>
+where
+    T: Copy + Display + PartialEq<T>,
+{
     fn on_input(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char(char) => {

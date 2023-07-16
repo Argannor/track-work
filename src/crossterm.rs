@@ -14,8 +14,8 @@ use tui::{
     Terminal,
 };
 
-use crate::{app::App, ui};
 use crate::win::focus_watcher::watch_foreground_windows;
+use crate::{app::App, ui};
 
 pub fn run(tick_rate: Duration) -> Result<(), Box<dyn Error>> {
     // setup terminal

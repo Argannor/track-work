@@ -3,14 +3,12 @@ use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 pub struct Log<'a> {
-    entries: Vec<&'a str>
+    entries: Vec<&'a str>,
 }
 
 impl<'a> Log<'a> {
     fn new() -> Log<'a> {
-        Log {
-            entries: vec![]
-        }
+        Log { entries: vec![] }
     }
 
     pub fn log(&mut self, str: String) {

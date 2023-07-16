@@ -1,7 +1,7 @@
-use std::{fs, io};
 use std::collections::HashMap;
 use std::fs::{DirEntry, File};
 use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 use crate::log::log;
 use crate::repository::model::WorkRecord;
@@ -18,17 +18,18 @@ impl WorkRecordRepository {
         create_dir_if_not_exists(root_path)?;
         let folder = root_path.join(Path::new("work_records/"));
         create_dir_if_not_exists(&folder)?;
-        let subfolder = folder.into_os_string().into_string().expect("this path should always convert");
-        Ok(WorkRecordRepository {
-            subfolder,
-        })
+        let subfolder = folder
+            .into_os_string()
+            .into_string()
+            .expect("this path should always convert");
+        Ok(WorkRecordRepository { subfolder })
     }
 
     pub fn get_latest(&self) -> Option<WorkRecord> {
         self.load_latest_week().and_then(|entries| {
             let mut values: Vec<WorkRecord> = entries.into_values().collect();
-            if values.is_empty()  {
-                return None
+            if values.is_empty() {
+                return None;
             }
             values.sort_by_key(|x| x.start);
             Some(values.remove(values.len() - 1))
@@ -44,16 +45,22 @@ impl WorkRecordRepository {
     }
 
     fn load_latest_week(&self) -> Option<HashMap<String, WorkRecord>> {
-        let iterator: io::Result<Vec<DirEntry>> = fs::read_dir(&self.subfolder).and_then(Iterator::collect);
+        let iterator: io::Result<Vec<DirEntry>> =
+            fs::read_dir(&self.subfolder).and_then(Iterator::collect);
         match iterator {
             Err(err) => {
-                log!("failed to list files in database directory ({}): {}", &self.subfolder, err);
+                log!(
+                    "failed to list files in database directory ({}): {}",
+                    &self.subfolder,
+                    err
+                );
                 None
             }
             Ok(mut iterator) if !iterator.is_empty() => {
                 iterator.sort_by_key(DirEntry::path);
 
-                iterator.last()
+                iterator
+                    .last()
                     .map(|entry| (WorkRecordRepository::get_all_of_file(&entry.path()), entry))
                     .and_then(|(result, entry)| {
                         if let Err(e) = &result {
@@ -61,8 +68,8 @@ impl WorkRecordRepository {
                         }
                         result.ok()
                     })
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -84,7 +91,7 @@ impl WorkRecordRepository {
         let file = File::create(&path)?;
         match serde_json::to_writer(file, &entries) {
             Ok(_) => Ok(()),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
 

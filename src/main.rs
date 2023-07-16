@@ -1,5 +1,5 @@
-use std::{error::Error, time::Duration};
 use std::sync::RwLock;
+use std::{error::Error, time::Duration};
 
 use argh::FromArgs;
 use config::Config;
@@ -9,11 +9,11 @@ use crate::app_config::AppConfig;
 use crate::crossterm::run;
 
 mod app;
-mod input;
-mod widgets;
 mod crossterm;
-mod ui;
+mod input;
 mod repository;
+mod ui;
+mod widgets;
 mod win;
 #[macro_use]
 mod log;
