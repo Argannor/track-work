@@ -10,12 +10,12 @@ pub fn watch_foreground_windows(polling_interval: Duration, threshold: Duration)
     thread::spawn(move || {
         let mut monitor = ChangeMonitor::new(String::new(), threshold);
         let mut focus = WindowFocus::default();
-        let mut text_string: String;
 
         loop {
             sleep(polling_interval);
-            text_string = focus.get_title();
-            monitor.set(text_string);
+            if let Some(title) = focus.get_title() {
+                monitor.set(title);
+            }
             if let Some(title) = monitor.poll() {
                 if let Err(e) = tx.send(title) {
                     panic!("failed during window handling: {e:?}")
@@ -30,21 +30,21 @@ pub fn watch_foreground_windows(polling_interval: Duration, threshold: Duration)
 
 struct WindowFocus {
     buffer: [u16; 128],
-    title: String,
     no_handle: HWND,
 }
 
 impl WindowFocus {
-    pub fn get_title(&mut self) -> String {
+    pub fn get_title(&mut self) -> Option<String> {
         let handle = unsafe { WindowsAndMessaging::GetForegroundWindow() };
         if handle == self.no_handle {
-            return self.title.clone();
+            return None;
         }
         let length = unsafe { WindowsAndMessaging::GetWindowTextW(handle, &mut self.buffer) };
         if length > 0 {
-            self.title = String::from_utf16_lossy(&self.buffer[0..length as usize]);
+            Some(String::from_utf16_lossy(&self.buffer[0..length as usize]))
+        } else {
+            None
         }
-        self.title.clone()
     }
 }
 
@@ -52,7 +52,6 @@ impl Default for WindowFocus {
     fn default() -> Self {
         WindowFocus{
             buffer: [0; 128],
-            title: String::new(),
             no_handle: HWND::default()
         }
     }

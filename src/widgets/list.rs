@@ -7,6 +7,7 @@ use tui::widgets::ListState;
 
 use crate::app::Focusable;
 
+#[derive(Debug, Clone)]
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
@@ -15,11 +16,15 @@ pub struct StatefulList<T> {
 }
 
 impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
-    pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-        let copy_of_items = items.clone();
+    pub fn with_items<I: IntoIterator<Item = T>>(items: I) -> StatefulList<T> {
+        let items: Vec<T> = items.into_iter().collect();
+        let copy_of_items: Vec<T> = items.clone();
 
         let mut state = ListState::default();
-        state.select(Some(0));
+
+        if !items.is_empty() {
+            state.select(Some(0));
+        }
 
         StatefulList {
             state,
@@ -30,28 +35,28 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     }
 
     pub fn next(&mut self) {
+        let item_count = self.items.len();
+        if item_count == 0 {
+            self.state.select(None);
+        }
+
         let i = match self.state.selected() {
-            Some(i) => {
-                if i + 1 >= self.items.len() {
-                    0
-                } else {
-                    i + 1
-                }
-            }
+            Some(i) if i + 1 >= item_count => 0,
+            Some(i) => i + 1,
             None => 0,
         };
         self.state.select(Some(i));
     }
 
     pub fn previous(&mut self) {
+        let item_count = self.items.len();
+        if item_count == 0 {
+            self.state.select(None);
+        }
+
         let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
+            Some(i) if i == 0 => item_count - 1,
+            Some(i) => i - 1,
             None => 0,
         };
         self.state.select(Some(i));
@@ -64,9 +69,11 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
     fn filter(&mut self) {
         let matcher = SkimMatcherV2::default();
         let selection = self.state.selected()
-            .and_then(|x| self.items_filtered.get(x)).copied();
+            .and_then(|x| self.items_filtered.get(x))
+            .cloned();
+        let filter = self.filter.as_str();
         self.items_filtered = self.items.iter()
-            .map(|x| (x, matcher.fuzzy_match(format!("{x}").as_str(), self.filter.as_str())))
+            .map(|x| (x, matcher.fuzzy_match(format!("{x}").as_str(), filter)))
             .filter(|(_, fuzz)| fuzz.is_some())
             .map(|(x, _)| *x)
             .collect();
@@ -80,7 +87,7 @@ impl<T> StatefulList<T> where T: Copy + Display + PartialEq<T> {
 }
 
 impl<T> Focusable for StatefulList<T> where T: Copy + Display + PartialEq<T> {
-    fn on_input(&mut self, event: KeyEvent) {
+    fn on_input(&mut self, event: &KeyEvent) {
         match event.code {
             KeyCode::Char(char) => {
                 self.filter += &char.to_string();
@@ -93,6 +100,4 @@ impl<T> Focusable for StatefulList<T> where T: Copy + Display + PartialEq<T> {
             _ => {}
         }
     }
-
-
 }

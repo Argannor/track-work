@@ -4,6 +4,7 @@ use tui::buffer::Buffer;
 use tui::layout::Rect;
 use tui::widgets::{Paragraph, StatefulWidget, Widget};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct WeekPickerState {
     pub date: NaiveDate,
 }
@@ -31,6 +32,7 @@ impl Default for WeekPickerState {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct WeekPicker {
 }
 

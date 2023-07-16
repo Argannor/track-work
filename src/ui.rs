@@ -1,4 +1,3 @@
-
 use tui::{
     backend::Backend,
     Frame,
@@ -21,13 +20,10 @@ use crate::log::LOG;
 use crate::widgets::week_picker::{WeekPicker};
 
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    // let chunks = Layout::default()
-    //     .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
-    //     .split(f.size());
-    draw_first_tab(f, app, f.size());
+    draw_screen(f, app, f.size());
 }
 
-fn draw_first_tab<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
+fn draw_screen<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     where
         B: Backend,
 {
@@ -65,6 +61,7 @@ fn draw_first_tab<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
 
     draw_projects(f, app, columns[0]);
     draw_log(f, app, columns[1]);
+
     if app.focus == Focus::Report {
         draw_report(f, app, rows[1])
     }
@@ -83,8 +80,14 @@ fn draw_report<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         Constraint::Percentage(100)
     ]).split(inner.inner(&Margin{vertical:0, horizontal: 1}));
 
-    let block = Block::default().borders(Borders::ALL).style(Style::default().bg(Color::Rgb(0x11, 0x11, 0x15)));
-    let paragraph = Paragraph::new(Span::from("Report")).block(block).wrap(Wrap { trim: true });
+    // TODO: create Popover Widget
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .style(Style::default().bg(Color::Rgb(0x11, 0x11, 0x15)));
+    let paragraph = Paragraph::new(Span::from("Report"))
+        .block(block)
+        .wrap(Wrap { trim: true });
+
     let picker = WeekPicker{};
     f.render_widget(Clear, inner);
     f.render_widget(paragraph, inner);
@@ -127,8 +130,6 @@ fn draw_header<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
             Mode::Filter(_) => Spans::from(vec![
                 Span::styled("⏎", hotkey),
                 Span::raw(" normal mode    "),
-                // Span::styled("<q>", hotkey),
-                // Span::raw(" Quit     "),
             ])
         },
         Spans::from(""),
@@ -175,9 +176,8 @@ fn draw_projects<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
         .block(block)
         .highlight_style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_symbol("> ");
-    // println!(">> {:?}", app.projects.state.selected());
+
     f.render_stateful_widget(projects, area, &mut app.projects.state);
-    // println!("<< {:?}", app.projects.state.selected());
 }
 
 fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
@@ -204,7 +204,7 @@ fn draw_log<B>(f: &mut Frame<B>, app: &mut App, area: Rect)
     if area.height > 2 {
         let messages: Vec<ListItem> = LOG.lock().unwrap()
             .last_n(area.height as usize - 2)
-            .iter().copied()
+            .into_iter()
             .map(|x| ListItem::new(vec![Spans::from(Span::raw(x))]))
             .collect();
         let log = List::new(messages)

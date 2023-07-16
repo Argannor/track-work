@@ -6,14 +6,14 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TimeKind {
     Productive,
-    Pause
+    Pause,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeSegment {
     pub start: DateTime<Utc>,
     pub end: Option<DateTime<Utc>>,
-    pub kind: TimeKind
+    pub kind: TimeKind,
 }
 
 impl TimeSegment {
@@ -38,7 +38,7 @@ pub struct WorkRecord {
     pub start: DateTime<Utc>,
     pub end: Option<DateTime<Utc>>,
     pub state: ProjectState,
-    pub segments: Vec<TimeSegment>
+    pub segments: Vec<TimeSegment>,
 }
 
 
@@ -66,25 +66,22 @@ impl Display for WorkRecord {
             ProjectState::Done => "✓"
         };
 
-        let mut result = format!(
-            "{} {}: {}",
-            icon,
-            self.name,
-            self.start.with_timezone(chrono::Local::now().offset()).format("%Y-%m-%d %H:%M"));
+        let end_description = if let Some(end) = self.end {
+            format!(" - {}", end.with_timezone(chrono::Local::now().offset()).format("%H:%M"))
+        } else {
+            "".to_string()
+        };
 
         let duration = self.calculate_duration();
-        if let Some(end) = self.end {
-            result = format!("{} - {} (working time: {:02}:{:02}:{:02})",
-                             result,
-                             end.with_timezone(chrono::Local::now().offset()).format("%H:%M"),
-                             duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
-            );
-        } else {
-            result = format!("{} (working time: {:02}:{:02}:{:02})",
-                             result,
-                             duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
-            );
-        }
+
+        let result = format!(
+            "{} {}: {}{} (time spent: {:02}:{:02}:{:02})",
+            icon,
+            self.name,
+            self.start.with_timezone(chrono::Local::now().offset()).format("%Y-%m-%d %H:%M"),
+            end_description,
+            duration.num_hours(), duration.num_minutes() % 60, duration.num_seconds() % 60
+        );
 
         f.write_str(&result)
     }

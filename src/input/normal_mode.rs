@@ -15,7 +15,6 @@ impl NormalMode {
         }
         {
             if let Some(selection) = app.projects.get_selected() {
-                // app.log(format!("selected project {}", selection));
                 app.start_working_on((*selection).to_string());
             }
         }

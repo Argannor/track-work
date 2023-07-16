@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AppConfig {
     pub projects: Vec<ProjectConfig>,
     pub clients: Vec<Client>,
@@ -13,7 +13,7 @@ pub struct AppConfig {
     pub breaks: BreakConfig,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProjectConfig {
     pub name: String,
     #[serde(default)]
@@ -22,27 +22,27 @@ pub struct ProjectConfig {
     pub clients: Vec<ProjectClient>,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProjectClient {
     pub name: String,
     #[serde(default="default_ratio")]
     pub ratio: f64,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Client {
     pub name: String,
     #[serde(default)]
     pub data: HashMap<String, String>,
 }
 
-#[derive(Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct LoggingConfig {
     #[serde(alias="windowChange")]
     pub window_change: bool,
 }
 
-#[derive(Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct BreakConfig {
     #[serde(default)]
     pub windows: Vec<String>,

@@ -33,11 +33,8 @@ pub static LOG: Lazy<Mutex<Log>> = Lazy::new(|| Mutex::new(Log::new()));
 #[macro_export]
 macro_rules! log {
     ($($arg:tt)*) => {{
-        // let mut log = LOG.lock().unwrap();
         let msg: String = format!($($arg)*);
-        // let msg = Box::leak(Box::new(msg));
-        // log.append(&mut vec![msg]);
-        LOG.lock().unwrap().log(msg);
+        $crate::log::LOG.lock().unwrap().log(msg);
     }}
 }
 

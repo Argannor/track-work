@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::Deref;
 use std::sync::Mutex;
 
-use chrono::{NaiveTime, TimeZone, Utc};
+use chrono::{Utc};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use once_cell::sync::Lazy;
 use uuid::Uuid;
@@ -13,7 +13,7 @@ use crate::app_config::AppConfig;
 use crate::input::filter_mode::FilterMode;
 use crate::input::handler::InputHandler;
 use crate::input::normal_mode::NormalMode;
-use crate::log::{LOG, log};
+use crate::log::{log};
 use crate::repository::model::{ProjectState, TimeKind, TimeSegment, WorkRecord};
 use crate::repository::work_record::WorkRecordRepository;
 use crate::SETTINGS;
@@ -29,7 +29,7 @@ static WORK_RECORD_REPO: Lazy<Mutex<WorkRecordRepository>> = Lazy::new(||
     ).expect("could not create database")));
 
 pub trait Focusable {
-    fn on_input(&mut self, event: KeyEvent);
+    fn on_input(&mut self, event: &KeyEvent);
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -45,6 +45,7 @@ pub enum Focus {
     Report,
 }
 
+#[derive(Debug)]
 pub struct ActiveProject {
     record: WorkRecord,
 }
@@ -61,7 +62,6 @@ impl ActiveProject {
     }
 
     pub fn new(name: String) -> ActiveProject {
-        let name: String = name;
         let start = Utc::now();
         let work_record = WorkRecord {
             id: Uuid::new_v4().to_string(),
@@ -76,7 +76,7 @@ impl ActiveProject {
             }],
         };
         log!("{}", work_record);
-        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&work_record) {
+        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(work_record.clone()) {
             log!("failed to save work record for {}: {}", work_record.name, e);
         }
 
@@ -84,6 +84,7 @@ impl ActiveProject {
     }
 
     pub fn begin_pause(&mut self) {
+        log!("𝄽 pausing work");
         self.record.state = ProjectState::Paused;
         if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
@@ -96,6 +97,7 @@ impl ActiveProject {
     }
 
     pub fn resume_work(&mut self) {
+        log!("♪ resuming work");
         self.record.state = Working;
         if let Some(last_segment) = self.record.segments.last_mut() {
             last_segment.finish();
@@ -117,7 +119,7 @@ impl ActiveProject {
             self.record.end = last_segment.end;
         }
         log!("{}", self.record);
-        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(&self.record) {
+        if let Err(e) = WORK_RECORD_REPO.lock().unwrap().persist(self.record.clone()) {
             log!("failed to save work record for {}: {}", self.record.name, e);
         }
     }
@@ -129,7 +131,7 @@ impl Display for ActiveProject {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ReportState {
     pub weekpicker: WeekPickerState,
     pub report: Option<Report>,
@@ -138,39 +140,41 @@ pub struct ReportState {
 impl ReportState {
     pub fn calculate(&mut self) {
         let (start, _) = self.weekpicker.start_and_end();
-        let start = Utc.from_local_datetime(&start.and_time(NaiveTime::default())).unwrap();
-        let records = WORK_RECORD_REPO.lock().unwrap().find_week(start);
+        let records = WORK_RECORD_REPO.lock().unwrap().find_week(&start);
         if let Ok(records) = records {
-            self.report = Some(Report::new_pct(records))
+            self.report = Some(Report::new_pct(&records))
         } else {
             self.report = None;
         }
     }
 }
 
+#[derive(Debug)]
 pub struct App<'a> {
     pub title: &'a str,
-    pub config: AppConfig,
     pub should_quit: bool,
-    pub projects: StatefulList<&'a str>,
-    pub enhanced_graphics: bool,
-    pub focus: Focus,
+
     pub mode: Mode,
+    pub focus: Focus,
+    pub auto_switch: bool,
+
+    pub projects: StatefulList<&'a str>,
     pub active_project: Option<ActiveProject>,
     pub report: ReportState,
-    pub auto_break: bool,
-    pub auto_switch: bool,
+
+    config: AppConfig,
+    auto_break: bool,
 }
 
-fn string_to_static_string(s: String) -> &'static str {
+fn string_to_static_string<'a>(s: String) -> &'a str {
     Box::leak(s.into_boxed_str())
 }
 
 impl<'a> App<'a> {
-    pub fn new(title: &'a str, enhanced_graphics: bool) -> App<'a> {
+    pub fn new(title: &'a str) -> App<'a> {
         let config = SETTINGS.read().expect("could not acquire read lock on app settings");
-        let config = config.deref().clone();
-        let projects: Vec<&'static str> = config
+        let config = config.deref();
+        let projects: Vec<&'a str> = config
             .projects
             .iter()
             .map(|p| p.name.clone())
@@ -178,16 +182,15 @@ impl<'a> App<'a> {
             .collect();
         App {
             title,
-            config,
+            config: config.clone(),
             should_quit: false,
             projects: StatefulList::with_items(projects),
             focus: Focus::Projects,
             mode: Mode::Normal(NormalMode {}),
-            enhanced_graphics,
             active_project: ActiveProject::load_previous(),
             report: ReportState::default(),
             auto_break: false,
-            auto_switch: true
+            auto_switch: true,
         }
     }
 
@@ -230,6 +233,7 @@ impl<'a> App<'a> {
     pub fn start_working_on(&mut self, project: String) {
         if let Some(ref mut current_project) = self.active_project {
             if current_project.record.name == project {
+                current_project.resume_work();
                 return;
             }
             current_project.stop();
@@ -272,7 +276,7 @@ impl<'a> App<'a> {
         handled
     }
 
-    pub(crate) fn on_window_focus_changed(&mut self, window_title: String) {
+    pub(crate) fn on_window_focus_changed(&mut self, window_title: &String) {
         if !self.auto_switch {
             return;
         }
@@ -282,13 +286,12 @@ impl<'a> App<'a> {
         // if we previously went on auto break and auto resume is configured, resume
         if self.auto_break && self.config.breaks.auto_resume {
             if let Some(ref mut active_project) = self.active_project {
-                log!("♪ resuming work");
                 active_project.resume_work();
             }
         }
         self.auto_break = false;
 
-        // go over the list of projects and there window title (prefixes)
+        // go over the list of projects and window titles to find a match (prefixes)
         let mut associated_project: Option<String> = None;
         for project in &self.config.projects {
             for window in &project.windows {
@@ -303,13 +306,12 @@ impl<'a> App<'a> {
             return;
         }
 
-        // check if the window is configured for auto break
+        // check if the window is configured to trigger an automatic break (i.e. lockscreens)
         let go_on_break = self.config.breaks.windows.iter()
             .any(|title| window_title.to_lowercase().starts_with(&title.to_lowercase()));
         if go_on_break {
             if let Some(ref mut active_project) = self.active_project {
                 // start the break and set auto_break, so we can auto resume if configured
-                log!("𝄽 pausing work");
                 active_project.begin_pause();
                 self.auto_break = true;
             }
@@ -329,16 +331,9 @@ impl<'a> App<'a> {
         }
     }
 
-    pub fn send_input_to_focus(&mut self, event: KeyEvent) {
+    pub fn send_input_to_focus(&mut self, event: &KeyEvent) {
         if self.focus == Focus::Projects {
             self.projects.on_input(event);
         }
-        // match self.focus {
-        //     Focus::Projects => self.projects.on_input(event),
-        //     _ => {}
-        // };
-        // if let Some(focus) = self.get_focus() {
-        //     focus.on_input(self, event);
-        // }
     }
 }
