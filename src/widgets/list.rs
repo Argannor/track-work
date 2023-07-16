@@ -101,3 +101,38 @@ impl<T> Focusable for StatefulList<T> where T: Copy + Display + PartialEq<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_previous_next() {
+        let mut list = StatefulList::with_items(vec!["a", "b", "c"]);
+
+        assert_eq!(list.get_selected(), Some(&"a"));
+        list.next();
+        assert_eq!(list.get_selected(), Some(&"b"));
+        list.next();
+        assert_eq!(list.get_selected(), Some(&"c"));
+        list.next();
+        assert_eq!(list.get_selected(), Some(&"a"));
+        list.previous();
+        assert_eq!(list.get_selected(), Some(&"c"));
+        list.previous();
+        assert_eq!(list.get_selected(), Some(&"b"));
+        list.previous();
+        assert_eq!(list.get_selected(), Some(&"a"));
+    }
+
+    #[test]
+    fn test_empty_list() {
+        let mut list: StatefulList<&'static str> = StatefulList::with_items(vec![]);
+
+        assert_eq!(list.get_selected(), None);
+        list.next();
+        assert_eq!(list.get_selected(), None);
+        list.previous();
+        assert_eq!(list.get_selected(), None);
+    }
+}
