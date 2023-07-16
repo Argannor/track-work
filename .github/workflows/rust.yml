@@ -9,7 +9,7 @@ jobs:
   # Workaround for making Github Actions skip based on commit message `[skip ci]`
   # Source https://gist.github.com/ybiquitous/c80f15c18319c63cae8447a3be341267
   prepare:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     if: |
       !contains(format('{0} {1} {2}', github.event.head_commit.message, github.event.pull_request.title, github.event.pull_request.body), '[skip ci]')
     steps:
